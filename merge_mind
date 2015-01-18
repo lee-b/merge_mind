@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+
+import sys
+import lxml.etree as ETree
+import pdb
+
+DEBUG = False
+
+def load_tree(input_file):
+	tree = ETree.ElementTree()
+	tree.parse(input_file)
+
+	for node in tree.findall("//node[@LINK]"):
+		old_id = node.get('ID')
+
+		link_dest = node.get('LINK')
+
+		linked_file_content = load_tree(link_dest) # NOTE: recursing here
+
+		linked_top_node = linked_file_content.find('.//node')
+
+		linked_top_node.set('ID', old_id) # NOTE: should check for conflict with existing ids here, but any further html processing should catch duplicate ids
+
+		if DEBUG:
+			sys.stderr.write("Replacing node %r with node %r" % (ETree.tostring(node), ETree.tostring(linked_top_node)))
+
+		parent = node.getparent()
+		parent.replace(node, linked_top_node)
+
+	return tree
+
+if __name__ == "__main__":
+	input_file = sys.argv[1]
+	tree = load_tree(input_file)
+	sys.stdout.write(ETree.tostring(tree).decode('utf8'))
+
+
